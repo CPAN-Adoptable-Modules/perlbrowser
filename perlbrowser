@@ -1,0 +1,244 @@
+#!/usr/bin/perl -w
+use strict;
+
+use CPAN;
+use Data::Dumper;
+use File::Find::Rule;
+use File::Basename;
+use IO::Scalar;
+use Pod::Text;
+use Tk::HList;
+use Tk;
+
+
+# prune auto split
+my $inc = init();
+			
+my $mw = MainWindow->new();
+$mw->resizable(0,1);
+$mw->bind( '<Control-q>', \&my_exit );
+	
+$mw->configure( -menu => my $menubar = $mw->Menu );
+$mw->title( "Module 0.0" );
+
+$menubar->cascade(
+	-label     => "File",
+	-menuitems => [[qw( command ~Quit -accelerator ^Q -command ), [ \&my_exit ] ]],
+	-tearoff   => 0,
+	);
+
+my $top_frame    = $mw->Frame()->pack( -anchor => 'n', -side => 'top' );
+my $bottom_frame = $mw->Frame()->pack( -anchor => 'n', -side => 'bottom' );
+
+my $class        = $top_frame->Label( -text => "Foo" )->pack( 
+	-side   => 'left',
+	-anchor => 'w',
+	);
+	
+my $version      = $top_frame->Label( -width => 5, -text => '???' )->pack( 
+	-side   => 'left',
+	-anchor => 'w',
+	);
+
+my $cpan_label   = $top_frame->Label( -text => 'CPAN v' )->pack( -side => 'left' );
+my $cpan_version = $top_frame->Label( -width => 5, -text => '???' )->pack( -side => 'left' );
+
+my $id_label   = $top_frame->Label( -text => '???' )->pack( -side => 'left' );
+
+my $hlist = $bottom_frame->Scrolled( 'HList',
+				-scrollbars       => 're',
+				-height           => 25,
+				-itemtype         => 'text',
+				-highlightcolor   => 'green',
+				-selectbackground => 'green',
+				-separator        => '/',
+				-selectmode       => 'single',
+				)->pack( 
+					-anchor => 'w', 
+					-side   => 'left', 
+					-expand => 1, 
+					-fill   => 'y' );
+
+my $text = $bottom_frame->Scrolled( 'Text',
+				-scrollbars      => 're',
+				-height          => 25,
+				-state           => 'disabled',
+				-width           => 80,
+				-exportselection => 1,
+				)->pack( 
+					-anchor => 'w', 
+					-side   => 'left',  
+					-expand => 1, 
+					-fill   => 'both' );
+
+
+
+$hlist->configure(
+	-command    => sub {
+		unless( $_[0] =~ /\.pm\z/ )
+			{
+			my @kids = $hlist->info('children', $_[0]);
+			return unless @kids;
+			
+			my $action = $hlist->info('hidden', $kids[0]) ?
+				'show' : 'hide';
+			
+			foreach my $kid ( @kids )
+				{
+				$hlist->$action('entry', $kid );
+				}
+			$text->configure( -state => 'normal' );
+			$text->delete( '1.0', 'end' );
+			$text->configure( -state => 'disabled' );
+			
+			$mw->title( "[Module 0.0]" );
+
+			$version->configure( -text => '???' );
+			$cpan_version->configure( -text => '???' );
+			$class->configure( -text => '???' );
+			$id_label->configure( -text => '???' );
+			}
+		else
+			{
+			$text->delete( '1.0', 'end' );
+			my $data = $hlist->info('data', $_[0]);
+
+			my( $file, $package, $key ) = split /\000/, $data;
+						
+			if( $file and -e $file )
+				{
+				my $output = do {
+					if( exists $inc->{$key}{pod} )
+						{
+						print "Using cached pod\n";
+						$inc->{$key}{pod};
+						}
+					else
+						{
+						my $output;
+						my $p = Pod::Text->new;
+						my $out = IO::Scalar->new( \$output );
+						
+						my $in;
+						open $in, $data;
+						
+						$p->parse_from_filehandle( $in, $out );
+						
+						$output;
+						}
+					};
+					
+				$text->configure( -state => 'normal' );
+				$text->delete( '1.0', 'end' );
+				$text->insert("end", $output || "No pod available\n$data" );
+				$text->configure( -state => 'disabled' );
+				
+				my $hash = module_info( $package );
+						
+				$mw->title( "$package $hash->{inst_version}" );
+				$version->configure(      -text => $hash->{inst_version} );
+				$cpan_version->configure( -text => $hash->{cpan_version} );
+				$class->configure(        -text => $package              );
+				$id_label->configure(     -text => $hash->{author}       );
+				}
+			}
+			
+		},
+	);
+	
+
+populate_hlist( $inc, $hlist );
+
+MainLoop;
+
+sub module_info
+	{
+	my $package = shift;
+	my $hash = { map { $_, '???' } qw( inst_version cpan_version userid author ) };
+	
+	my $info = CPAN::Shell->expand('Module', $package);
+	return $hash unless ref $info;
+	
+	$hash->{inst_version} = $info->inst_version;
+	$hash->{cpan_version} = $info->cpan_version;
+	$hash->{userid}       = $info->userid;
+
+	$hash->{author}       = CPAN::Shell->expand('Author', $hash->{userid})->fullname;
+	
+	return $hash;
+	}
+	
+sub init
+	{
+	my $DATA_DIR = "$ENV{HOME}/.perlbrowser";
+	mkdir $DATA_DIR unless -d $DATA_DIR;
+	
+	my $DATA_FILE = "$DATA_DIR/module_data";
+
+	my $hash;
+	
+	if( 0 and -e $DATA_FILE )
+		{
+		print "Reading cached data...\n";
+		my $data = do { local $/; open FILE, $DATA_FILE; <FILE> };
+		#print $data, "\n";
+		$hash = eval $data;
+		return;
+		}
+		
+	my $rule = File::Find::Rule->new()->file->name('*.pm');
+
+	my %dirs = map { $_, 1 } grep { not m/^\./ } @INC;
+	my @dirs = keys %dirs;
+	
+	foreach my $dir ( @dirs )
+		{
+		print "Processing $dir...\n";
+		my @files = map { s/\Q$dir\///; $_ } $rule->in( $dir );
+		foreach my $path ( @files )
+			{
+			my $file = basename( $path );
+			@{$hash->{$file}}{qw( class library )} = ($path, $dir);
+			}
+			
+		}
+		
+	return $hash;
+	}
+
+sub populate_hlist
+	{
+	my( $inc, $hlist ) = @_;
+	
+	foreach my $key ( sort { lc $inc->{$a}{class} cmp lc $inc->{$b}{class} } keys %$inc ) 
+		{
+		#print "Processing [$inc->{$key}{class}]\n";
+		my @parts = split m|/|, $inc->{$key}{class};
+			
+		my( $class ) = map { my $x = $_; $x =~ s|/|::|g; $x =~ s/\.pm\z//; $x } 
+			$inc->{$key}{class};
+		
+		for( my $i = 0; $i < @parts; $i++ )
+			{
+			my $part = join "/", @parts[0..$i];
+			
+			my $data = ( $i == @parts - 1 ) ? 
+				join "/", @{$inc->{$key}}{qw(library class)} : undef;
+			
+			$data = join "\000", $data, $class, $key if $data;
+			
+			$hlist->add( $part, -text => $parts[$i], -data => $data )
+				unless $hlist->info('exists', $part );
+			$hlist->hide( 'entry', $part ) unless $i == 0;
+			}
+			
+		}
+	}
+	
+sub my_exit
+	{ 
+	#open my $fh, "> $DATA_FILE";
+	#print $fh Dumper( $inc );
+	exit 
+	};
+
