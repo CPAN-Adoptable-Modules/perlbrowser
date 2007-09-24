@@ -6,6 +6,9 @@ my $script = 'perlbrowser';
 WriteMakefile(
     'NAME'		    => $script,
 	'VERSION'       => '0.15',
+	'LICENSE'      => 'perl',
+	'AUTHOR'       => 'brian d foy <bdfoy@cpan.org>',
+	
 	
 	'EXE_FILES' =>  [ $script ],
 	    	
