@@ -1,14 +1,17 @@
 # $Id$
 use ExtUtils::MakeMaker;
 	
+require 5.006;
+
 my $script = 'perlbrowser';
 
 WriteMakefile(
     'NAME'		    => $script,
+	'ABSTRACT'      => 'A perl class browser';
+
 	'VERSION'       => '0.15',
-	'LICENSE'      => 'perl',
-	'AUTHOR'       => 'brian d foy <bdfoy@cpan.org>',
-	
+	'LICENSE'       => 'perl',
+	'AUTHOR'        => 'brian d foy <bdfoy@cpan.org>',
 	
 	'EXE_FILES' =>  [ $script ],
 	    	
