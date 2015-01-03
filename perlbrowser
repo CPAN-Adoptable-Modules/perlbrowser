@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-# $Id$
 use strict;
 use warnings;
 
@@ -210,11 +209,15 @@ init();
 my $mw = MainWindow->new();
 
 mw_configure( $mw );
+print "1\n";
 
 make_gui( $mw );
+print "2\n";
 
 make_tabs();
+print "3\n";
 make_labels();
+print "4\n";
 make_version_labels();
 
 create_hlist();
@@ -915,7 +918,7 @@ sub modify_codetext_menu
 		
 	my $last = $menu->index( 'last' );
 	
-	foreach my $index ( reverse 0 .. $last )
+	foreach my $index ( () ) #reverse 0 .. $last )
 		{
 		my $label = $menu->entrycget( $index, 'label' );
 		$menu->delete( $index ) if $label =~ m/(?:File|Edit)/i;
