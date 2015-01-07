@@ -1,17 +1,17 @@
+require 5.008;
 use strict;
 use warnings;
 	
-require 5.006;
 
 my $script = 'perlbrowser';
 
 my $github    = 'https://github.com/briandfoy/perlbrowser';
-my $main_file = 'lib/';
+my $main_file = 'lib/App/perlbrowser.pm';
 
 my %WriteMakefile = (
     'NAME'		    => $script,
 	'ABSTRACT_FROM' => $main_file,
-	'VERSION_FROM'  => $main_file;
+	'VERSION_FROM'  => $main_file,
 	'LICENSE'       => 'perl',
 	'AUTHOR'        => 'brian d foy <bdfoy@cpan.org>',
 	
