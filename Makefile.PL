@@ -66,7 +66,7 @@ my %WriteMakefile = (
 		$script => "\$(INST_MAN1DIR)/$script.1",
 		},
 		
-	clean => { FILES => "*.bak $script-*" },
+	clean => { FILES => "$dist-*" },
 	);
 
 sub arguments { \%WriteMakefile }
