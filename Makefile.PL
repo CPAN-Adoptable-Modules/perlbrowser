@@ -7,6 +7,8 @@ my $script = 'perlbrowser';
 use File::Spec::Functions qw(catfile);
 
 my $module    = 'App::perlbrowser';
+( my $dist = $module ) =~ s/::/-/g;
+
 my $github    = 'https://github.com/briandfoy/perlbrowser';
 my $main_file = catfile( 'lib', split /::/, "$module.pm" );
 
