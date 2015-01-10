@@ -1,4 +1,6 @@
 require 5.008;
+
+package App::perlbrowser;
 use strict;
 use warnings;
 
@@ -6,7 +8,7 @@ my $script = 'perlbrowser';
 
 use File::Spec::Functions qw(catfile);
 
-my $module    = 'App::perlbrowser';
+my $module    = __PACKAGE__;
 ( my $dist = $module ) =~ s/::/-/g;
 
 my $github    = 'https://github.com/briandfoy/perlbrowser';
