@@ -1,10 +1,10 @@
-#!/usr/bin/perl
+package App::perlbrowser;
 use strict;
 use warnings;
 
 =head1 NAME
 
-perlbrowser
+App::perlbrowser - a Tk class browser for Perl
 
 =head1 SYNOPSIS
 
