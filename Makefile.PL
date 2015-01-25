@@ -2,6 +2,39 @@ package App::perlbrowser;
 use strict;
 use warnings;
 
+=encoding utf8
+
+=head1 The build file for App::perlbrowser
+
+This build file is a moduino; it works as both a build script and
+a module.
+
+To build the distribution, run this file normally:
+
+	% perl Makefile.PL
+
+But, it's more interesting than that. You can load it with C<require>
+and call C<arguments> to get the data structure it passes to
+C<WriteMakefile>:
+
+	my $package = require '/path/to/Makefile.PL';
+	my $arguments = $package->arguments;
+
+Note that C<require>-ing a file makes an entry in C<%INC> for exactly
+that name. If you try to C<require> another file with the same name,
+even from a different path, C<require> thinks it has already loaded
+the file. As such, I recommend you always require the full path to the
+file.
+
+The return value of the C<require> is a package name (in this case,
+the name of the main module. Use that to call the C<arguments> method.
+
+Even if this distribution needs a higher version of Perl, this bit
+only needs v5.8. You can play with the data structure with a primitive
+Perl.
+
+=cut
+
 my $script = 'perlbrowser';
 
 use File::Spec::Functions qw(catfile);
@@ -20,7 +53,7 @@ my %WriteMakefile = (
 	'VERSION_FROM'  => $main_file,
 	'LICENSE'       => 'perl',
 	'AUTHOR'        => 'brian d foy <bdfoy@cpan.org>',
-	
+
 	'EXE_FILES' =>  [ $script ],
 
 	'CONFIGURE_REQUIRES' => {
@@ -63,11 +96,11 @@ my %WriteMakefile = (
 			homepage => $github,
 			},
 		},
-	    	
+
 	'MAN1PODS' => {
 		$script => "\$(INST_MAN1DIR)/$script.1",
 		},
-		
+
 	clean => { FILES => "$dist-*" },
 	);
 
@@ -82,9 +115,9 @@ sub do_it {
 			||
 		"$MM 6.64";
 	eval "use $MM_version; 1" or die "Could not load $MM_version: $@";
-	eval "use Test::Manifest 1.21" 
+	eval "use Test::Manifest 1.21"
 		if -e File::Spec->catfile( qw(t test_manifest) );
-	
+
 	my $arguments = arguments();
 	my $minimum_perl = $arguments->{MIN_PERL_VERSION} || '5.008';
 	eval "require $minimum_perl;" or die $@;
