@@ -2,6 +2,8 @@ package App::perlbrowser;
 use strict;
 use warnings;
 
+=encoding utf8
+
 =head1 NAME
 
 App::perlbrowser - a Tk class browser for Perl
@@ -24,7 +26,7 @@ about the module (in some cases from the network), and makes those
 data available in several tabbed panes.
 
 Many of the panes have widgets that look like you should be able
-to type in them, but they are disabled.  You should still be able 
+to type in them, but they are disabled.  You should still be able
 to copy text from them, though.
 
 Text panes have a Middle-Button menu that includes facilities for
@@ -97,7 +99,7 @@ and reload it the next time you start it.
 =head3 Favorites Menu
 
 You can add favorite modules to this menu for easy access. The
-accelerator keys for this menu are currently broken.  The 
+accelerator keys for this menu are currently broken.  The
 perlbrowser application saves this list and reloads it the next
 time you use perlbrowser.
 
@@ -199,7 +201,7 @@ use Tk::HList;
 use Tk::NoteBook;
 
 use vars qw( %Widgets %TextVariables %My_INC %Favorites @Module_tabs %Labels );
-			
+
 use constant DEBUG => $ENV{PB_DEBUG} || 0;
 
 ########################################################################
@@ -237,7 +239,7 @@ MainLoop;
 sub clear_recent
 	{
 	my $menu = $Widgets{'recent_menu'}->menu;
-	
+
 	my $last = $menu->index('last') - 2;
 
 	foreach my $index ( reverse 0 .. $last )
@@ -245,30 +247,30 @@ sub clear_recent
 		$menu->delete( $index );
 		}
 	}
-	
+
 sub add_to_recent
 	{
 	my $package = shift;
-	
+
 	my %Seen = ();
-	
+
 	my $menu = $Widgets{'recent_menu'}->menu;
-	
+
 	my $last = $menu->index('last');
-	
+
 	if( $last > 10 ) { $menu->delete( $last - 2 ); }
-			
+
 	$menu->insert(
-			0, 'command', 
-			-label => $package, 
-			-command => sub { 
+			0, 'command',
+			-label => $package,
+			-command => sub {
 				display_module( $package );
 				},
 		);
 
 	$last = $menu->index('last');
-	
-	my @pairs =	map { 
+
+	my @pairs =	map {
 			my $label = $menu->entrycget( $_, 'label' );
 			if( ref $Seen{$label} )
 				{
@@ -280,7 +282,7 @@ sub add_to_recent
 				}
 			[ $_, $label ];
 			} 0 .. $last - 2;
-				
+
 	my @deletes = sort { $b <=> $a } map {
 		my $ref = $Seen{$_};
 		if( @$ref == 1 ) { () }
@@ -288,9 +290,9 @@ sub add_to_recent
 		} keys %Seen;
 
 	foreach my $index ( @deletes ) { $menu->delete( $index ); }
-	
+
 	update_recent_accelerators( $menu );
-	
+
 	$menu->update;
 	}
 
@@ -298,74 +300,74 @@ sub update_recent_accelerators
 	{
 	update_menu_accelerators( $_[0], 'Control' );
 	}
-	
+
 sub update_favorite_accelerators
 	{
 	update_menu_accelerators( $_[0], 'Alt' );
 	}
-	
+
 sub update_menu_accelerators
 	{
 	my $menu = shift;
 	my $meta = shift;
-	
+
 	my $last = $menu->index( 'last' );
-	
+
 	my %Symbols = qw(Control-Shift Shift- Control ^ Alt Alt-);
 	my %Keys = qw(1 w 2 e 3 t 4 u 5 o 6 a 7 g 8 j 9 k 0 l);
-	
+
 	my $symbol = $Symbols{$meta};
-	
+
 	foreach my $index ( 0 .. $last - 2 )
 		{
 		my $package = $menu->entrycget( $index, 'label' );
 		my $key     = ( $index + 1 ) % 10;
-		
-		$menu->entryconfigure( 
+
+		$menu->entryconfigure(
 			$index,
-			-accelerator => "$symbol$key", 
+			-accelerator => "$symbol$key",
 			);
-		
+
 		my $event = "<$meta-KeyPress-$key>";
 		print "Event is $event\n" if DEBUG;
-		
+
 		$mw->bind( $event, '' );
 		$mw->bind( 'all',  $event, sub { display_module( $package ) } );
 		}
-		
+
 	$menu->update;
 	$mw->update;
 	}
-	
+
 sub add_favorite
 	{
 	my $package = shift;
-	
+
 	my $menu = $Widgets{'fav_menu'}->menu;
 
 	# we must have been called from the menu
 	unless( defined $package )
 		{
 		my $label = $menu->entrycget( 'last', 'label' );
-	
+
 		$label =~ m/^Add\s+(\S+)/g;
-	
+
 		$package = $1;
 		}
-	
+
 	$menu->insert(
-			0, 'command', 
-			-label => $package, 
-			-command => sub { 
+			0, 'command',
+			-label => $package,
+			-command => sub {
 				display_module( $package );
 				},
 		);
-		
+
 	$Favorites{$package}++;
-	
+
 	update_add_favorite();
-	
-	$menu->update;	
+
+	$menu->update;
 	}
 
 sub update_add_favorite
@@ -373,48 +375,48 @@ sub update_add_favorite
 	my $package = shift;
 
 	$package = undef if defined $package && exists $Favorites{$package};
-	
+
 	my $state = defined $package ? 'normal' : 'disabled';
-	
+
 	$package ||= 'favorite';
-	
-	my $menu = $Widgets{'fav_menu'}->menu;	
-		
+
+	my $menu = $Widgets{'fav_menu'}->menu;
+
 	$menu->entryconfigure( 'last', -label => "Add $package",
 		-state => $state, -command => sub { add_favorite( $package ) } );
-	
+
 	update_favorite_accelerators( $menu );
-	
+
 	$menu->update;
 	}
-				
+
 sub make_gui
 	{
 	my $mw = shift;
-	
-	$Widgets{'top'}         = $mw->Frame->pack( 
+
+	$Widgets{'top'}         = $mw->Frame->pack(
 		-anchor => 'n', -expand => 1, -fill => 'both' );
-	$Widgets{'bottom'}      = $mw->Frame->pack( 
+	$Widgets{'bottom'}      = $mw->Frame->pack(
 		-anchor => 'n', -expand => 1, -fill => 'none', -side => 'left' );
-	
-	$Widgets{'notebook'} = $Widgets{'top'}->NoteBook->pack( 
-		-anchor => 'n', 
+
+	$Widgets{'notebook'} = $Widgets{'top'}->NoteBook->pack(
+		-anchor => 'n',
 		-side   => 'right',
 		-fill   => 'both',
 		 );
-		 
-	$Widgets{'sidebar' } = $Widgets{'top'}->Frame->pack( 
-		-anchor => 'n', 
-		-side   => 'left', 
+
+	$Widgets{'sidebar' } = $Widgets{'top'}->Frame->pack(
+		-anchor => 'n',
+		-side   => 'left',
 		-fill   => 'both' );
-		
-	$Widgets{'status'}   = $Widgets{'bottom'}->Label( 
-		-width => 80, -text => "Starting up..." 
-			)->pack( 
-				-side => 'left', 
-				-anchor => 'w', 
-				-expand => 1, 
-				-fill => 'none' 
+
+	$Widgets{'status'}   = $Widgets{'bottom'}->Label(
+		-width => 80, -text => "Starting up..."
+			)->pack(
+				-side => 'left',
+				-anchor => 'w',
+				-expand => 1,
+				-fill => 'none'
 				);
 	}
 
@@ -430,21 +432,21 @@ BEGIN {
 	[ qw(help Help Pod)      ],
 	);
 	}
-	
+
 sub make_tabs
-	{	
+	{
 	foreach my $ref ( @Module_tabs )
 		{
 		next unless UNIVERSAL::isa( $ref, 'ARRAY' );
-		
+
 		my $tab = $ref->[0] . "_tab";
-		
+
 		$Widgets{ $tab } = add_notebook_tab(
 			$Widgets{'notebook'},
 			$ref->[0],
 			$ref->[1],
 			);
-			
+
 		if( defined $ref->[2] )
 			{
 			my $name = $ref->[0];
@@ -466,13 +468,13 @@ sub create_hlist
 					-selectbackground => 'green',
 					-separator        => '/',
 					-selectmode       => 'single',
-					)->pack( 
-						-anchor => 'w', 
-						-side   => 'left', 
-						-expand => 1, 
+					)->pack(
+						-anchor => 'w',
+						-side   => 'left',
+						-expand => 1,
 						-fill   => 'both' );
 	}
-	
+
 sub configure_hlist
 	{
 	$Widgets{'hlist'}->configure(
@@ -482,60 +484,60 @@ sub configure_hlist
 				{
 				my @kids = get_list_children( $_[0] );
 				return unless @kids;
-				
+
 				$Widgets{'hlist'}->info('hidden', $kids[0]) ?
 					expand_list( \@kids ) : shrink_list( \@kids );
-							
+
 				clear_module();
 				}
 			else
 				{
 				my $data = $Widgets{'hlist'}->info('data', $_[0]);
-				
+
 				my( $package, $file ) = split m/\000/, $data;
-				
+
 				display_module( $package, $file );
 				}
-				
+
 			},
 		);
 	}
-	
+
 sub get_pod
 	{
 	my $file = shift;
-	
+
 	my $pod;
 	my $p = Pod::Text->new;
 	my $out = IO::Scalar->new( \$pod );
-	
+
 	my $in;
 	open $in, $file;
-	
+
 	$p->parse_from_filehandle( $in, $out );
-		
+
 	return $pod;
 	}
-	
+
 sub add_notebook_tab
 	{
 	my( $notebook, $title, $label ) = @_;
-		
+
 	$notebook->add( $title, -label => $label, -underline => 0 )
 	}
 
 sub print_status
 	{
 	my $message = shift;
-	
+
 	$Widgets{'status'}->configure( -text => $message );
 	$Widgets{'status'}->update;
-	
+
 	print $message, "\n" if DEBUG;
 	}
 
-sub clear_status 
-	{ 
+sub clear_status
+	{
 	$Widgets{'status'}->configure( -text => '' );
 	$Widgets{'status'}->update;
 	};
@@ -544,39 +546,39 @@ sub module_info
 	{
 	my $package = shift;
 	my $hash = { map { $_, '???' } qw( inst_version cpan_version userid author) };
-	
+
 	$hash->{'package'} = $package;
-	
+
 	print_status( "Getting info for $package" );
 	my $info = CPAN::Shell->expand('Module', $package);
 	return $hash unless ref $info;
-	
+
 	$hash->{inst_version} = $info->inst_version;
 	$hash->{cpan_version} = $info->cpan_version;
 	$hash->{userid}       = $info->userid;
 	$hash->{description}  = $info->description;
 	$hash->{cpan_file}    = $info->cpan_file;
 	$hash->{inst_file}    = $info->inst_file;
-	
+
 	$hash->{author}       = CPAN::Shell->expand('Author', $hash->{userid})->fullname;
-	
+
 	clear_status();
-	
+
 	return $hash;
 	}
-	
+
 sub init
 	{
 	my $DATA_DIR = "$ENV{HOME}/.perlbrowser";
 	mkdir $DATA_DIR unless -d $DATA_DIR;
 	mkdir "$DATA_DIR/rules" unless -d "$DATA_DIR/rules";
-		
+
 	my $DATA_FILE = "$DATA_DIR/module_data";
 
 	%My_INC = map { $_, 1 } @INC;
-	
+
 	my $hash;
-	
+
 	if( 0 and -e $DATA_FILE )
 		{
 		print_status( "Reading cached data..." );
@@ -584,46 +586,46 @@ sub init
 		$hash = eval $data;
 		return;
 		}
-		
+
 	}
-	
+
 sub run_init
-	{	
+	{
 	clear_status();
-	
+
 	load_favorites();
 	load_recent();
 
 	my $hash = get_modules();
-	
+
 	return $hash;
 	}
 
 sub clear_hlist
-	{	
+	{
 	$Widgets{'hlist'}->delete( 'all' );
 	}
-	
+
 sub make_hlist
 	{
 	my $hash = get_modules();
-	
+
 	clear_hlist( $Widgets{'hlist'} );
-	
+
 	populate_hlist( $hash, $Widgets{'hlist'} );
 	}
-	
+
 sub get_modules
 	{
 	my $hash = {};
-	
+
 	my $rule = File::Find::Rule->new()->file->name( '*.pm' );
-	
+
 	my @search = grep { $My_INC{$_} } keys %My_INC;
-	
+
 	local( $") = "\n\t";
 	print "Searching\n\t@search\n" if DEBUG;
-	
+
 	foreach my $dir ( @search )
 		{
 		print_status( "Processing $dir..." );
@@ -636,26 +638,26 @@ sub get_modules
 				if 0 && exists $$hash{$file};
 			@{$hash->{$path}}{qw( file library )} = ($file, $dir);
 			}
-			
+
 		}
-		
+
 	clear_status();
-	
-	return $hash;		
+
+	return $hash;
 	}
-	
+
 sub populate_hlist
 	{
 	my( $inc, $hlist ) = @_;
-	
+
 	print_status( "Creating module list..." );
-		
-	foreach my $path ( sort { lc $a cmp lc $b } keys %$inc ) 
-		{		
+
+	foreach my $path ( sort { lc $a cmp lc $b } keys %$inc )
+		{
 		my @parts = split m|/|, $path;
-				
+
 		# Turn path into a class
-		my( $package ) = map { my $x = $_; $x =~ s|/|::|g; $x =~ s/\.p(?:m|od)\z//; $x } 
+		my( $package ) = map { my $x = $_; $x =~ s|/|::|g; $x =~ s/\.p(?:m|od)\z//; $x }
 			$path;
 
 		for( my $i = 0; $i < @parts; $i++ )
@@ -664,34 +666,34 @@ sub populate_hlist
 			my $part = join "/", @parts[0..$i];
 			my $file = join "/", $inc->{$path}{'library'}, $path;
 			my $data = join "\000", $package, $file;
-			
+
 			$hlist->add( $part, -text => $parts[$i], -data => $data )
 				unless $hlist->info('exists', $part );
 			$hlist->hide( 'entry', $part ) unless $i == 0;
 			}
-			
+
 		}
-		
+
 	clear_status();
 	}
 
 sub make_labels
 	{
-	foreach my $ref ( 
-			[ qw(Package package)], 
+	foreach my $ref (
+			[ qw(Package package)],
 			[ qw(Author author) ],
 			[ qw(UserID userid) ],
-			[ qw(Installed inst_version) ], 
+			[ qw(Installed inst_version) ],
 			[ qw(CPAN cpan_version) ],
-			[ qw(Description description) ], 
-			[ 'Local File', qw(inst_file) ], 
-			[ 'CPAN File', qw(cpan_file) ], 
+			[ qw(Description description) ],
+			[ 'Local File', qw(inst_file) ],
+			[ 'CPAN File', qw(cpan_file) ],
 			)
 		{
 		my( $label, $name ) = @$ref;
-				
+
 		make_label_entry_pair( $Widgets{'meta_tab'}, $label, $name );
-		
+
 		$Labels{$name}++;
 		}
 	}
@@ -699,39 +701,39 @@ sub make_labels
 sub make_label_entry_pair
 	{
 	my( $widget, $label, $name ) = @_;
-				
-	my $new_frame = $widget->Frame->pack( 
-		-anchor => 'n', 
-		-fill   => 'both' 
+
+	my $new_frame = $widget->Frame->pack(
+		-anchor => 'n',
+		-fill   => 'both'
 		);
-	
-	my $description = $new_frame->Label( 
-		-text   => $label, 
-		-width  => 10, 
+
+	my $description = $new_frame->Label(
+		-text   => $label,
+		-width  => 10,
 		-anchor => 'e',
-		)->pack( 
-			-side => 'left' 
+		)->pack(
+			-side => 'left'
 			);
 
-	$Widgets{$name} = $new_frame->Entry( 
+	$Widgets{$name} = $new_frame->Entry(
 		-selectbackground => 'green',
-		-exportselection  => 1,  
+		-exportselection  => 1,
 		-width            => 50,
-			)->pack( 
-				-side => 'left' 
+			)->pack(
+				-side => 'left'
 				);
-			
+
 	$Widgets{$name}->configure( -state => 'disabled' );
 	}
-	
+
 sub make_version_labels
-	{	
+	{
 	foreach my $version ( sort keys %Module::CoreList::version )
 		{
-		make_label_entry_pair( $Widgets{'core_tab'}, $version, $version );				
+		make_label_entry_pair( $Widgets{'core_tab'}, $version, $version );
 		}
 	}
-		
+
 sub clear_module
 	{
 	delete_text( $Widgets{'pod'}    );
@@ -739,27 +741,27 @@ sub clear_module
 	delete_text( $Widgets{'symbol'} );
 	delete_text( $Widgets{'prereq'} );
 
-	update_info_pane(); #XXX: this is broken 
+	update_info_pane(); #XXX: this is broken
 	display_corelist();
 	display_isa();
-	
+
 	update_add_favorite();
 
-	clear_status();	
+	clear_status();
 	}
-	
+
 sub display_module
 	{
 	my( $package, $file ) = @_;
-	
+
 	return unless defined $package;
-		
+
 	clear_module();
 
 	my $hash = module_info( $package );
-	
+
 	$file ||= $hash->{'inst_file'};
-	
+
 	print_status( "Fetching info for $package $hash->{inst_version}..." );
 
  	display_pod( $file );
@@ -770,17 +772,17 @@ sub display_module
 	display_isa( $package );
 
 	update_info_pane( $hash );
-	
+
 	add_to_recent( $package );
 	update_add_favorite( $package );
-	
+
 	print_status( "Showing $package $hash->{inst_version}..." );
 	}
 
 sub display_isa
 	{
 	my( $package, $file ) = @_;
-				
+
 	my $output = do {
 		if( defined $package )
 			{
@@ -792,64 +794,64 @@ sub display_isa
 			''
 			}
 		};
-			
+
 	replace_text( $Widgets{'isa'}, \$output );
 	}
 
 sub display_prereq
 	{
 	my( $package, $file ) = @_;
-	
+
 	my $hash = Module::ScanDeps::scan_deps( files => [ $file ], recurse => 0 );
 
 	my $output = '';
-	
+
 	foreach my $key ( sort { lc $a cmp lc $b } keys %$hash )
 		{
 		next if $key =~ m|^auto/|;
 		$output .= "$key\n";
 		}
-		
+
 	replace_text( $Widgets{'prereq'}, \$output );
 	}
-	
+
 sub display_corelist
 	{
 	my $package = defined $_[0] ? $_[0] : '';
-		
+
 	foreach my $core (  keys %Module::CoreList::version )
-		{		
+		{
 		my $version = exists $Module::CoreList::version{$core}{$package} ?
 			$Module::CoreList::version{$core}{$package} :
 			'';
-		
+
 		$Widgets{$core}->configure( -state => 'normal'   );
 		$Widgets{$core}->configure( -text => \$version    );
 		$Widgets{$core}->configure( -state => 'disabled' );
 		}
 	}
-	
+
 sub display_symbols
 	{
 	my $package = shift;
-	
+
 	my $symbols = Devel::Symdump->new( $package );
-	
+
 	my $output = $symbols->as_string;
-	
+
 	replace_text( $Widgets{'symbol'}, \$output );
 	}
-	
+
 sub display_pod
 	{
 	my $file = shift;
-	
+
 	my $pod = $file;
 	$pod =~ s/\.pm\z/.pod/;
-	
+
 	my $output = do {
 		my $data = '';
-		
+
 		if( -e $file and $data = get_pod( $file ) )
 			{
 			$data;
@@ -863,24 +865,24 @@ sub display_pod
 			"File not found\n$file\n$pod";
 			}
 		};
-		
+
 	replace_text( $Widgets{'pod'}, \$output );
 	}
-	
+
 sub display_code
 	{
 	my $file = shift;
-	
+
 	open my($fh), $file;
-	
+
 	my $output = '';
-	
+
 	while( <$fh> )
 		{
 		#$output .= sprintf "%05d %s", $., $_;
 		$output .= $_;
 		}
-								
+
 	replace_text( $Widgets{'code'}, \$output );
 	}
 
@@ -888,7 +890,7 @@ sub text_widget
 	{
 	my $widget = shift;
 	my $type   = shift;
-	
+
 	my $codetext = $widget->Scrolled( 'CodeText',
 		-disablemenu      => 0,
 		-rulesdir         => "$ENV{HOME}/.perlbrowser/rules",
@@ -901,40 +903,40 @@ sub text_widget
 		-selectbackground => 'green',
 		-background       => 'white',
 		-syntax           => $type,
-		)->pack( 
-			-anchor => 'w', 
-			-side   => 'left',  
-			-expand => 1, 
+		)->pack(
+			-anchor => 'w',
+			-side   => 'left',
+			-expand => 1,
 			-fill   => 'both' );
-			
+
 	modify_codetext_menu( $codetext->menu );
-	
+
 	return $codetext;
 	}
-	
+
 sub modify_codetext_menu
 	{
 	my $menu = shift;
-		
+
 	my $last = $menu->index( 'last' );
-	
+
 	foreach my $index ( () ) #reverse 0 .. $last )
 		{
 		my $label = $menu->entrycget( $index, 'label' );
 		$menu->delete( $index ) if $label =~ m/(?:File|Edit)/i;
 		}
 	}
-	
+
 sub replace_text
 	{
 	my $widget   = shift;
 	my $text_ref = shift;
-		
+
 	my $default = "";
 	$text_ref ||= \$default;
-	
+
 	#$text_ref = \$text_ref unless ref $text_ref;
-	
+
 	$widget->configure( -state => 'normal' );
 	$widget->delete( '1.0', 'end' );
 	$widget->insert("end", $$text_ref );
@@ -944,7 +946,7 @@ sub replace_text
 sub delete_text
 	{
 	my $widget   = shift;
-	
+
 	$widget->configure( -state => 'normal' );
 	$widget->delete( '1.0', 'end' );
 	$widget->configure( -state => 'disabled' );
@@ -953,12 +955,12 @@ sub delete_text
 sub mw_configure
 	{
 	my $mw = shift;
-	
+
 	$mw->resizable(0,1);
 
 	$mw->configure( -menu => $Widgets{'menubar'} = $mw->Menu );
 	$mw->title( "perlbrowser" );
-	
+
 	$Widgets{'file_menu'} = $Widgets{'menubar'}->cascade(
 		-label     => "File",
 		-menuitems => [[qw( command ~Quit -accelerator ^Q -command ), [ \&my_exit ] ]],
@@ -992,7 +994,7 @@ sub mw_configure
 		-label     => "Recent",
 		-menuitems => [
 			'separator',
-			[ 'command',  'Clear Menu',  -state => 'normal', 
+			[ 'command',  'Clear Menu',  -state => 'normal',
 				-command => \&clear_recent ],
 			],
 		-tearoff   => 0,
@@ -1019,51 +1021,51 @@ sub get_list_children
 sub do_list_action
 	{
 	my( $action, $kids ) = @_;
-	
+
 	foreach my $kid ( @$kids )
 		{
 		$Widgets{'hlist'}->$action('entry', $kid );
 		}
 	}
-		
+
 sub expand_list
 	{
 	my $kids = shift;
-	
+
 	do_list_action( 'show', $kids );
 	}
-	
+
 sub shrink_list
 	{
 	my $kids = shift;
-	
+
 	do_list_action( 'hide', $kids );
 	}
-	
+
 sub add_label_frame
 	{
 	my( $frame, $label, $name, $initial ) = @_;
-			
+
 	$initial = defined $initial ? $initial : 'Foo';
-	
+
 	my $new_frame   = $frame->Frame->pack( -anchor => 'n', -fill => 'both' );
-	
+
 	my $description = $new_frame->Label( -text => $label, -width => 10, -anchor => 'e',
 		)->pack( -side => 'left' );
 
 	print "Name is $name\n" if DEBUG;
-	$Widgets{$name}    = $new_frame->Entry( 
+	$Widgets{$name}    = $new_frame->Entry(
 		-text => $initial, -exportselection => 1, -state => 'disabled', -width => 50,
 			)->pack( -side => 'left' );
 	}
-	
+
 sub add_help
 	{
 	my $file = $0;
 	print_status( "script is $file" );
 
 	my $text = get_pod( $file );
-		
+
 	replace_text( $Widgets{'help'}, \$text, 'Tk::CodeText::Perl' );
 
 	clear_status;
@@ -1072,7 +1074,7 @@ sub add_help
 sub key_bindings
 	{
 	my $mw = shift;
-	
+
 	$mw->bind( '<Control-q>', \&my_exit );
 	$mw->bind( '<Control-r>', \&make_hlist );
 
@@ -1089,7 +1091,7 @@ sub key_bindings
 sub dump_keybindings
 	{
 	return unless DEBUG;
-	
+
 	foreach my $index ( qw(q m) )
 		{
 		print "$index: ", Data::Dumper::Dumper( $mw->bind( "<Control-$index>" ) );
@@ -1101,11 +1103,11 @@ sub dump_keybindings
 		print "$index: ", Data::Dumper::Dumper( $mw->bind( "<Control-$index>" ) );
 		}
 	}
-	
+
 sub update_info_pane
-	{	
+	{
 	my $hash = shift;
-		
+
 	unless( UNIVERSAL::isa( $hash, 'HASH' ) )
 		{
 		foreach my $name ( keys %Labels )
@@ -1115,10 +1117,10 @@ sub update_info_pane
 			$Widgets{$name}->delete( 0, 'end' );
 			$Widgets{$name}->configure( -state => 'disabled' );
 			}
-			
+
 		return;
 		}
-		
+
 	foreach my $value ( keys %$hash )
 		{
 		next unless exists $Widgets{$value};
@@ -1128,15 +1130,15 @@ sub update_info_pane
 		$Widgets{$value}->configure( -state => 'disabled' );
 		}
 	}
-	
+
 sub my_exit
-	{ 
+	{
 	print_status( "Exiting..." );
-	
+
 	save_favorites();
 	save_recent();
-	
-	exit 
+
+	exit
 	};
 
 sub save_favorites
@@ -1144,31 +1146,31 @@ sub save_favorites
 	print_status( "Saving favorites..." );
 
 	open my($fh), "> $ENV{HOME}/.perlbrowser/favorites.txt";
-	
+
 	foreach my $key ( keys %Favorites )
 		{
 		print $fh $key, "\n";
 		}
-	
+
 	close $fh;
 
 	clear_status();
 	}
-	
+
 sub load_favorites
 	{
 	print_status( "Loading favorites..." );
-	
+
 	open my($fh), "$ENV{HOME}/.perlbrowser/favorites.txt";
-	
+
 	while( <$fh> )
 		{
 		chomp;
 		add_favorite( $_ );
-		}	
-		
+		}
+
 	close $fh;
-	
+
 	clear_status();
 	}
 
@@ -1187,26 +1189,26 @@ sub save_recent
 		my $module = $menu->entrycget( $index, 'label' );
 		print $fh $module, "\n";
 		}
-				
+
 	close $fh;
-	
+
 	clear_status();
 	}
-	
+
 sub load_recent
 	{
 	print_status( "Loading recent..." );
-	
+
 	open my($fh), "$ENV{HOME}/.perlbrowser/recent.txt"
 		or return;
-	
+
 	while( <$fh> )
 		{
 		chomp;
 		add_to_recent( $_ );
-		}	
-		
+		}
+
 	close $fh;
-	
+
 	clear_status();
 	}
